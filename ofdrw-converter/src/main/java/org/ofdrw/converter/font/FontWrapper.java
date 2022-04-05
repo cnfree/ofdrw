@@ -9,14 +9,14 @@ public class FontWrapper<T> {
 
     T font;
 
-    private boolean enableSimilarFontReplace;
+    private boolean enableLoad;
 
     public FontWrapper() {
     }
 
-    public FontWrapper(T font, boolean enableSimilarFontReplace) {
+    public FontWrapper(T font, boolean enableLoad) {
         this.font = font;
-        this.enableSimilarFontReplace = enableSimilarFontReplace;
+        this.enableLoad = enableLoad;
     }
 
     public T getFont() {
@@ -27,11 +27,11 @@ public class FontWrapper<T> {
         this.font = font;
     }
 
-    public boolean isEnableSimilarFontReplace() {
-        return enableSimilarFontReplace;
+    public boolean isEnableLoad() {
+        return enableLoad;
     }
 
-    public void setEnableSimilarFontReplace(boolean enableSimilarFontReplace) {
-        this.enableSimilarFontReplace = enableSimilarFontReplace;
+    public void setEnableLoad(boolean enableLoad) {
+        this.enableLoad = enableLoad;
     }
 }

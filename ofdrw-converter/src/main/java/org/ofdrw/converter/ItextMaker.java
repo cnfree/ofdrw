@@ -705,7 +705,7 @@ public class ItextMaker {
             }
 
 
-            if (!StringUtils.isBlank(textCodePoint.getGlyph()) && !pdfFontWrapper.isEnableSimilarFontReplace()) {
+            if (!StringUtils.isBlank(textCodePoint.getGlyph()) && pdfFontWrapper.isEnableLoad()) {
                 List<Glyph> glyphs = new ArrayList<>();
                 String[] glys = textCodePoint.getGlyph().split(" ");
                 for (String gly : glys) {

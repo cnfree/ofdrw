@@ -23,6 +23,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
+import java.util.Properties;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
@@ -35,8 +37,16 @@ import java.util.regex.Pattern;
 public final class FontLoader {
     private static final Logger log = LoggerFactory.getLogger(FontLoader.class);
 
-    private final Map<String, String> fontNamePathMapping = new ConcurrentHashMap<>();
+    private final Map<String, String> fontNamePathMapping = new TreeMap<>();
     private final Map<String, String> fontNameAliasMapping = new ConcurrentHashMap<>();
+    private final Properties fontNameMapper = new Properties();
+    {
+        try {
+            fontNameMapper.load(FontLoader.class.getResourceAsStream("/fonts/font-name-mapper.properties"));
+        } catch (Exception e) {
+        }
+        ;
+    }
 
     /**
      * 使用正则匹配映射到系统或嵌入字体
@@ -314,6 +324,24 @@ public final class FontLoader {
         if (name != null && fontNamePathMapping.containsKey(name)) {
             return fontNamePathMapping.get(name);
         }
+
+        if (fontName.indexOf("_") != -1) {
+            String[] fonts = fontName.split("_");
+            for (String font : fonts) {
+                if (fontNamePathMapping.containsKey(font)) {
+                    return fontNamePathMapping.get(font);
+                }
+            }
+        }
+
+        if (fontName.toLowerCase().indexOf("helvetica") != -1) {
+            return fontNamePathMapping.get("Arial");
+        }
+
+        if (familyName == null) {
+            return null;
+        }
+
         name = fontNameAliasMapping.get(familyName);
         if (name != null && fontNamePathMapping.containsKey(name)) {
             return fontNamePathMapping.get(name);
@@ -453,7 +481,7 @@ public final class FontLoader {
         if (ctFont == null) {
             return null;
         }
-        boolean hasReplace = false;
+        boolean enableLoad = false;
 
         TrueTypeFont trueTypeFont = null;
         try {
@@ -471,16 +499,17 @@ public final class FontLoader {
                 if (similarFontPath != null) {
                     trueTypeFont = loadExternalFont(similarFontPath, null, null);
                 }
-                hasReplace = true;
             }
         } catch (Exception e) {
             log.info("无法加载字体: {} {} {}, {}" + ctFont.getFamilyName(), ctFont.getFontName(), ctFont.getFontFile(), e);
         }
         if (trueTypeFont == null) {
             trueTypeFont = defaultFont;
-            hasReplace = true;
+            enableLoad = false;
+        } else {
+            enableLoad = true;
         }
-        return new FontWrapper<>(trueTypeFont, hasReplace);
+        return new FontWrapper<>(trueTypeFont, enableLoad);
     }
 
 
@@ -554,38 +583,72 @@ public final class FontLoader {
          *      - 成功就返还
          * - 不含路径，尝试从操作系统中加载字体
          */
-        final String fontName = ctFont.attributeValue("FontName");
-        final String familyName = ctFont.getFamilyName();
+        String fontName = ctFont.attributeValue("FontName");
+        if (fontName != null && fontNameMapper.containsKey(fontName)) {
+            fontName = fontNameMapper.getProperty(fontName);
+        }
+        String familyName = ctFont.getFamilyName();
+        if (familyName != null && fontNameMapper.containsKey(familyName)) {
+            familyName = fontNameMapper.getProperty(familyName);
+        }
         try {
             ST_Loc fontFileLoc = ctFont.getFontFile();
             FontProgram fontProgram = null;
-            boolean hasReplace = false;
+            boolean enableLoad = false;
             // 尝试加载内嵌字体
             if (fontFileLoc != null) {
                 String fontAbsPath = rl.getFile(fontFileLoc).toAbsolutePath().toString();
-                fontProgram = getFontProgram(fontAbsPath);
+                fontProgram = getFontProgram(fontAbsPath, fontName);
+                if (fontProgram != null) {
+                    enableLoad = true;
+                }
             }
             // 尝试根据名字从操作系统加载字体
             if (fontProgram == null) {
                 // 首先尝试从操作系统加兹安
                 String fontAbsPath = getSystemFontPath(familyName, fontName);
+                if (fontAbsPath != null && fontFileLoc == null) {
+                    enableLoad = true;
+                }
+
                 if (fontAbsPath == null && enableSimilarFontReplace) {
                     // 操作系统中不存在，那么尝试使用近似的字体替换
-                    hasReplace = true;
                     fontAbsPath = getReplaceSimilarFontPath(familyName, fontName);
+
+
+                    if (fontAbsPath == null && familyName != null) {
+                        int boldIndex = familyName.toLowerCase().indexOf("bold");
+                        int italicIndex = familyName.toLowerCase().indexOf("italic");
+                        if (boldIndex != -1) {
+                            familyName = familyName.substring(0, boldIndex).trim();
+                            if (familyName.endsWith("-")) {
+                                familyName = familyName.substring(0, familyName.length() - 1);
+                            }
+                        } else if (italicIndex != -1) {
+                            familyName = familyName.substring(0, italicIndex).trim();
+                            if (familyName.endsWith("-")) {
+                                familyName = familyName.substring(0, familyName.length() - 1);
+                            }
+                        }
+                        fontAbsPath = getReplaceSimilarFontPath(familyName, fontName);
+                    }
+
+                    if (fontAbsPath != null && fontFileLoc == null) {
+                        enableLoad = true;
+                    }
                 }
-                fontProgram = getFontProgram(fontAbsPath);
+                fontProgram = getFontProgram(fontAbsPath, fontName);
             }
             // 前面两种加载机制都失效时，使用默认字体
             if (fontProgram == null) {
-                log.info("无法内嵌加载字体 {} {} {}", familyName, fontName, ctFont.getFontFile());
+                log.info("无法加载内嵌字体 {} {} {}", familyName, fontName, ctFont.getFontFile());
                 fontProgram = iTextDefaultFont;
-                hasReplace = true;
+                return new FontWrapper<>(PdfFontFactory.createFont(iTextDefaultFont, PdfEncodings.IDENTITY_H, false), false);
             }
-            return new FontWrapper<>(PdfFontFactory.createFont(fontProgram, PdfEncodings.IDENTITY_H, false), hasReplace);
+            return new FontWrapper<>(PdfFontFactory.createFont(fontProgram, PdfEncodings.IDENTITY_H, true), enableLoad);
         } catch (Exception e) {
-            log.info("加载字体异常 {} {} {}，原因:{}", familyName, fontName, ctFont.getFontFile(), e.getMessage());
-            return new FontWrapper<>(PdfFontFactory.createFont(iTextDefaultFont, PdfEncodings.IDENTITY_H, false), true);
+            log.info("加载字体异常 {} {} {}，原因:{}", familyName, fontName, ctFont.getFontFile(), e.getMessage(), e);
+            return new FontWrapper<>(PdfFontFactory.createFont(iTextDefaultFont, PdfEncodings.IDENTITY_H, false), false);
         }
 
     }
@@ -598,7 +661,7 @@ public final class FontLoader {
      * @param fontAbsPath 字体路径
      * @return 字体对象
      */
-    private FontProgram getFontProgram(String fontAbsPath) {
+    private FontProgram getFontProgram(String fontAbsPath, String fontName) {
         if (fontAbsPath == null) {
             return null;
         }
@@ -611,14 +674,18 @@ public final class FontLoader {
 
             if (fileName.endsWith(".ttc")) {
                 fontProgram = FontProgramFactory.createFont(fontRaw, 0, false);
-            } else if (fileName.endsWith(".ttf") || fileName.endsWith(".otf")) {
-                fontProgram = new com.itextpdf.io.font.TrueTypeFont(fontRaw);
+            } else if (fileName.endsWith(".ttf") || fileName.endsWith(".otf") || fileName.endsWith(".cff")) {
+                try {
+                    fontProgram = new com.itextpdf.io.font.TrueTypeFont(fontRaw, fileName);
+                } catch (Exception e) {
+                    log.error("Can't load font: {}", fontName, e);
+                }
             } else {
-                fontProgram = FontProgramFactory.createFont(fontRaw);
+                fontProgram = FontProgramFactory.createFont(fontRaw, fontName);
             }
             return fontProgram;
         } catch (Exception e) {
-            log.info("字体加载失败 {} , {}", fontAbsPath, e.getMessage());
+            log.info("字体加载失败 {} , {}", fontAbsPath, e.getMessage(), e);
             return null;
         }
     }

@@ -1,6 +1,7 @@
 package org.ofdrw.converter.font;
 
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.fontbox.cff.CFFFont;
 import org.apache.fontbox.cff.CFFParser;
@@ -9,8 +10,8 @@ import org.apache.fontbox.ttf.CmapTable;
 import org.apache.fontbox.type1.Type1Font;
 import org.ofdrw.converter.font.type1.Type1SegSplitParser;
 
-import java.awt.*;
 import java.awt.geom.GeneralPath;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -32,7 +33,7 @@ import java.util.Map;
  * @author 权观宇
  * @since 2021-09-28 21:05:09
  */
-public class TrueTypeFont implements GlyphDataProvider,FontDrawPathProvider {
+public class TrueTypeFont implements GlyphDataProvider, FontDrawPathProvider {
 
     /**
      * 字形数量
@@ -101,7 +102,9 @@ public class TrueTypeFont implements GlyphDataProvider,FontDrawPathProvider {
     public TrueTypeFont() {
     }
 
-
+    public static void main(String[] args) throws IOException {
+        new TrueTypeFont().parse(FileUtils.readFileToByteArray(new File("D:\\develop\\ofdrw\\ofdrw-converter\\src\\test\\resources\\intro-数科\\Doc_0\\Res\\font_764_764.otf")));
+    }
 
     /**
      * 创建TTF字体解析器
