@@ -29,7 +29,9 @@ public enum OFDColorSpaceType {
      * @throws IllegalArgumentException 未知的颜色空间类型
      */
     public static OFDColorSpaceType getInstance(String type) {
-      type = (type == null)? "" : type.trim();
+        type = (type == null)? "" : type.trim();
+        if(type.length() == 0)
+            return null;
         type = type.toUpperCase();
         switch (type) {
             case "GRAY":

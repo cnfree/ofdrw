@@ -131,15 +131,21 @@ final public class ColorConvert {
             colorValues = cVs.get(index).getColor();
         }
         // 根据颜色空间类型，转换颜色为RGB
-        switch (cs.getType()) {
-            case RGB:
-                return colorValues.expectIntArr(3);
-            case CMYK:
-                final int[] cmyk = colorValues.expectIntArr(4);
-                return cmykToRgb(cmyk[0], cmyk[1], cmyk[2], cmyk[3]);
-            case GRAY:
-                final int[] gray = colorValues.expectIntArr(1);
-                return new int[]{gray[0], gray[0], gray[0]};
+        try {
+            if (cs.getType() == null) {
+                return new int[]{0, 0, 0};
+            }
+            switch (cs.getType()) {
+                case RGB:
+                    return colorValues.expectIntArr(3);
+                case CMYK:
+                    final int[] cmyk = colorValues.expectIntArr(4);
+                    return cmykToRgb(cmyk[0], cmyk[1], cmyk[2], cmyk[3]);
+                case GRAY:
+                    final int[] gray = colorValues.expectIntArr(1);
+                    return new int[]{gray[0], gray[0], gray[0]};
+            }
+        } catch (Exception e) {
         }
         return new int[]{0, 0, 0};
     }

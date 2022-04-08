@@ -2,15 +2,12 @@ package org.ofdrw.reader;
 
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
-import org.apache.commons.compress.utils.IOUtils;
 
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Enumeration;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 
 public class ZipUtil {
@@ -124,34 +121,63 @@ public class ZipUtil {
 
     /**
      * 使用apache common compress库 解压zipFile，能支持更多zip包解压的特性
+     *
      * @param srcFile 带解压的源文件
      * @param descDir 解压到目录
      * @throws IOException
      */
+
     public static void unZipFileByApacheCommonCompress(File srcFile, String descDir) throws IOException {
-        File pathFile = new File(descDir).getCanonicalFile();
-        if (!pathFile.exists() && !pathFile.mkdirs()) {
-            throw new IOException("解压目录创建失败: " + pathFile);
+        try {
+            unZipFileByApacheCommonCompress(srcFile, descDir, "UTF-8");
+        } catch (Exception e) {
+            unZipFileByApacheCommonCompress(srcFile, descDir, "GBK");
         }
-        try (ZipFile zipFile = new ZipFile(srcFile)) {
-            ZipEntry entry = null;
-            Enumeration<? extends ZipEntry> entries = zipFile.entries();
-            while (entries.hasMoreElements()) {
-                entry = entries.nextElement();
-                File f = new File(pathFile, entry.getName());
-                if (entry.isDirectory()) {
-                    if (!f.isDirectory() && !f.mkdirs()) {
-                        throw new IOException("failed to create directory " + f);
-                    }
-                } else {
-                    File parent = f.getParentFile();
-                    if (!parent.isDirectory() && !parent.mkdirs()) {
-                        throw new IOException("failed to create directory " + parent);
-                    }
-                    try (OutputStream o = Files.newOutputStream(f.toPath())) {
-                        IOUtils.copy(zipFile.getInputStream(entry), o);
-                    }
+    }
+
+    public static void unZipFileByApacheCommonCompress(File srcFile, String descDir, String encoding) throws IOException {
+        InputStream inputStream = null;//源文件输入流，用于构建 ZipArchiveInputStream
+        OutputStream outputStream = null;//解压缩的文件输出流
+        ZipArchiveInputStream zipArchiveInputStream = null;//zip 文件输入流
+        ArchiveEntry archiveEntry = null;//压缩文件实体.
+        try {
+            inputStream = new FileInputStream(srcFile);//创建输入流，然后转压缩文件输入流
+            zipArchiveInputStream = new ZipArchiveInputStream(inputStream, encoding);
+            //遍历解压每一个文件.
+            while (null != (archiveEntry = zipArchiveInputStream.getNextEntry())) {
+                String archiveEntryFileName = archiveEntry.getName();//获取文件名
+                File entryFile = new File(descDir, archiveEntryFileName);//把解压出来的文件写到指定路径
+                if (archiveEntry.isDirectory()) {
+                    entryFile.mkdirs();
+                    continue;
                 }
+                if (!entryFile.getParentFile().exists()) {
+                    entryFile.getParentFile().mkdirs();
+                }
+                byte[] buffer = new byte[1024 * 5];
+                outputStream = new FileOutputStream(entryFile);
+                int length = -1;
+                while ((length = zipArchiveInputStream.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, length);
+                }
+                outputStream.flush();
+                outputStream.close();
+            }
+        } catch (IOException e) {
+            throw e;
+        } finally {
+            try {
+                if (null != outputStream) {
+                    outputStream.close();
+                }
+                if (null != zipArchiveInputStream) {
+                    zipArchiveInputStream.close();
+                }
+                if (null != inputStream) {
+                    inputStream.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
     }
