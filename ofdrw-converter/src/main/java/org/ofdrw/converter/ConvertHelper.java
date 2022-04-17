@@ -46,6 +46,9 @@ public class ConvertHelper {
         lib = Lib.PDFBox;
     }
 
+    public static void ofd2pdf(Object input, Object output){
+        ofd2pdf(input, output, 0);
+    }
     /**
      * OFD转换PDF
      *
@@ -56,7 +59,7 @@ public class ConvertHelper {
      * @throws IllegalArgumentException 参数错误
      * @throws GeneralConvertException  文档转换过程中异常
      */
-    public static void ofd2pdf(Object input, Object output) {
+    public static void ofd2pdf(Object input, Object output, int pageLimit) {
         OFDReader reader = null;
         try {
             if (input instanceof InputStream) {
@@ -81,6 +84,9 @@ public class ConvertHelper {
                         int pageNum = 1;
                         ItextMaker pdfMaker = new ItextMaker(reader);
                         for (PageInfo pageInfo : reader.getPageList()) {
+                            if (pageLimit > 0 && pageNum > pageLimit) {
+                                break;
+                            }
                             start = System.currentTimeMillis();
                             pdfMaker.makePage(pdfDocument, pageInfo);
                             end = System.currentTimeMillis();
@@ -94,6 +100,9 @@ public class ConvertHelper {
                         PdfboxMaker pdfMaker = new PdfboxMaker(reader, pdfDocument);
                         long start = 0, end = 0, pageNum = 1;
                         for (PageInfo pageInfo : reader.getPageList()) {
+                            if (pageLimit > 0 && pageNum > pageLimit) {
+                                break;
+                            }
                             start = System.currentTimeMillis();
                             pdfMaker.makePage(pageInfo);
                             end = System.currentTimeMillis();
@@ -151,6 +160,10 @@ public class ConvertHelper {
         ofd2pdf(input, output);
     }
 
+    public static void toPdf(InputStream input, OutputStream output, int pageLimit) {
+        ofd2pdf(input, output, pageLimit);
+    }
+
     /**
      * 转PDF
      *
@@ -161,6 +174,10 @@ public class ConvertHelper {
      */
     public static void toPdf(InputStream input, File output) {
         ofd2pdf(input, output);
+    }
+
+    public static void toPdf(InputStream input, File output, int pageLimit) {
+        ofd2pdf(input, output, pageLimit);
     }
 
     /**
@@ -175,6 +192,10 @@ public class ConvertHelper {
         ofd2pdf(input, output);
     }
 
+    public static void toPdf(InputStream input, String output, int pageLimit) {
+        ofd2pdf(input, output, pageLimit);
+    }
+
     /**
      * 转PDF
      *
@@ -185,6 +206,10 @@ public class ConvertHelper {
      */
     public static void toPdf(Path input, OutputStream output) {
         ofd2pdf(input, output);
+    }
+
+    public static void toPdf(Path input, OutputStream output, int pageLimit) {
+        ofd2pdf(input, output, pageLimit);
     }
 
     /**
@@ -199,6 +224,10 @@ public class ConvertHelper {
         ofd2pdf(input, output);
     }
 
+    public static void toPdf(Path input, File output, int pageLimit) {
+        ofd2pdf(input, output, pageLimit);
+    }
+
     /**
      * 转PDF
      *
@@ -209,6 +238,10 @@ public class ConvertHelper {
      */
     public static void toPdf(Path input, Path output) {
         ofd2pdf(input, output);
+    }
+
+    public static void toPdf(Path input, Path output, int pageLimit) {
+        ofd2pdf(input, output, pageLimit);
     }
 
 
