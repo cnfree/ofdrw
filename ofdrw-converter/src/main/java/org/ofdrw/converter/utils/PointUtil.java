@@ -376,7 +376,8 @@ public class PointUtil {
                         int pos = cgTransform.getCodePosition();
                         int codeCount = cgTransform.getCodeCount();
                         if (i > pos && i < (pos + codeCount)) {
-                            if (cgTransform.getGlyphs().size() < codeCount) {
+                            //FIXED bug_fix_1.ofd
+                            if (cgTransform.getGlyphs().size() < codeCount && cgTransform.getGlyphs().size() <= i - pos) {
                                 skipPosition = true;
 
                                 skipCount++;
@@ -470,6 +471,10 @@ public class PointUtil {
                         String glyphs = textCodePointList.get(textCodePointList.size() - 1).getGlyph() + " " + cgTransform.getGlyphs().getArray().get(i - pos);
                         textCodePointList.get(textCodePointList.size() - 1).setGlyph(glyphs);
                     } else {
+                        //FIXED bug_fix_1.ofd
+                        if (i - pos >= cgTransform.getGlyphs().getArray().size()) {
+                            continue;
+                        }
                         textCodePointList.get(i).setGlyph(cgTransform.getGlyphs().getArray().get(i - pos));
                     }
                 }
